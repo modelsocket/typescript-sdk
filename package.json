@@ -1,0 +1,23 @@
+{
+  "name": "modelsocket",
+  "version": "0.0.3",
+  "description": "A client library for ModelSockets ",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "tsc -p tsconfig.json --watch --preserveWatchOutput"
+  },
+  "author": "Zack Angelo (zack@mixlayer.com)",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "bufferutil": "^4.0.9",
+    "ws": "^8.18.2"
+  }
+}
