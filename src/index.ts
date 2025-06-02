@@ -1,4 +1,4 @@
-import { WebSocket, MessageEvent } from "ws";
+import { WebSocket, MessageEvent, ClientOptions } from "ws";
 
 const LOG_LEVEL: string | null = process.env.MODELSOCKET_LOG || null;
 
@@ -69,8 +69,20 @@ export class ModelSocket {
     this.socket.onmessage = this.onMessage.bind(this);
   }
 
-  static async connect(url: string) {
-    const socket = new WebSocket(url);
+  static async connect(url: string, opts?: ClientOptions) {
+    const apiKey = process?.env?.MODELSOCKET_API_KEY;
+    let wsOpts = opts || {};
+
+    if (apiKey) {
+      wsOpts = {
+        ...opts,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      };
+    }
+
+    const socket = new WebSocket(url, wsOpts);
 
     let p = new Promise<ModelSocket>((resolve, reject) => {
       socket.onopen = () => {

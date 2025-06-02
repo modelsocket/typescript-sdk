@@ -42,11 +42,9 @@ async function main() {
     const stream = seq.gen({ role: "assistant" });
 
     // Stream the response text
-    console.log("Assistant:");
     for await (const chunk of stream.textStream()) {
       process.stdout.write(chunk);
     }
-    console.log("\n");
 
     // Or get the full text at once
     // const fullText = await stream.text();
@@ -77,9 +75,9 @@ main();
 First, establish a connection to your ModelSocket server:
 
 ```typescript
-import { ModelSocket } from "modelsocket-ts";
+import { ModelSocket } from "modelsocket";
 
-const client = await ModelSocket.connect("ws://your-modelsocket-server-url");
+const client = await ModelSocket.connect("wss://models.mixlayer.ai/ws");
 ```
 
 ### Opening a Sequence
@@ -100,7 +98,7 @@ const seq = await client.open(
 
 You can append messages to a sequence to build up context. This is useful for providing history or instructions to the LLM.
 
-```typescript
+````typescript
 // Append a user message
 await seq.append("Tell me a joke.", { role: "user" });
 
@@ -109,10 +107,6 @@ await seq.append("The user is feeling playful.", {
   role: "system",
   hidden: true,
 });
-
-// Append an assistant's previous response
-await seq.append("Why did the chicken cross the road?", { role: "assistant" });
-```
 
 ### Generating Text
 
@@ -143,14 +137,14 @@ process.stdout.write("\n");
 // Or text and tokens:
 // const { text, tokens } = await stream.textAndTokens();
 // console.log("Full text:", text, "All tokens:", tokens);
-```
+````
 
 ### Using Tools
 
 If tools are enabled for a sequence (`tools: true` during `client.open()`), you can install tool definitions on the `Seq` object.
 
 ```typescript
-import { Tool } from "modelsocket-ts";
+import { Tool } from "modelsocket";
 
 // Define a tool
 const getWeatherTool: Tool = {
@@ -201,7 +195,7 @@ process.stdout.write("\n");
 
 ### Forking a Sequence
 
-Forking allows you to create a new sequence that inherits the context of an existing one. This is useful for exploring different conversational paths without affecting the original sequence.
+Forking allows you to create a new sequence that inherits the context of an existing one. This is useful for exploring different conversational paths without affecting the original sequence or efficiently parallelizing work that utilizies a common context window.
 
 ```typescript
 // Create a fork
