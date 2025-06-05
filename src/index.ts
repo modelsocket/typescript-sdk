@@ -449,16 +449,17 @@ class Seq {
     }
 
     (async () => {
+      let results: ToolResult[] = [];
+
       for (const toolCall of event.tool_calls!) {
         let args;
+
         // try to parse the args as json, if it fails, pass the args as a string
         try {
           args = JSON.parse(toolCall.args);
         } catch (e) {
           args = toolCall.args;
         }
-
-        let results: ToolResult[] = [];
 
         // sequential tool invocation, allow concurrent in the future
         try {
@@ -471,18 +472,18 @@ class Seq {
         } catch (e) {
           Logger.error(`error invoking tool ${toolCall.name}`, e);
         }
-
-        this.socket.send({
-          request: ReqType.SEQ_COMMAND,
-          seq_id: this.seqId,
-          cid: event.cid,
-          data: {
-            command: SeqCommandType.TOOL_RETURN,
-            gen_opts: this.curGenOpts,
-            results,
-          },
-        });
       }
+
+      this.socket.send({
+        request: ReqType.SEQ_COMMAND,
+        seq_id: this.seqId,
+        cid: event.cid,
+        data: {
+          command: SeqCommandType.TOOL_RETURN,
+          gen_opts: this.curGenOpts,
+          results,
+        },
+      });
     })();
   }
 
