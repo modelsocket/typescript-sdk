@@ -98,7 +98,7 @@ const seq = await client.open(
 
 You can append messages to a sequence to build up context. This is useful for providing history or instructions to the LLM.
 
-````typescript
+```typescript
 // Append a user message
 await seq.append("Tell me a joke.", { role: "user" });
 
@@ -131,7 +131,7 @@ process.stdout.write("\n");
 // Alternatively, get all text at once after the stream finishes:
 // const fullResponse = await stream.text();
 // console.log(fullResponse);
-````
+```
 
 ### Using Tools
 
