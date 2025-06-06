@@ -107,6 +107,7 @@ await seq.append("The user is feeling playful.", {
   role: "system",
   hidden: true,
 });
+```
 
 ### Generating Text
 
@@ -123,9 +124,6 @@ const stream: GenStream = seq.gen({
 for await (const chunk of stream.stream()) {
   if (!chunk.hidden) {
     process.stdout.write(chunk.text);
-    if (chunk.tokens) {
-      // console.log("Tokens:", chunk.tokens);
-    }
   }
 }
 process.stdout.write("\n");
@@ -133,10 +131,6 @@ process.stdout.write("\n");
 // Alternatively, get all text at once after the stream finishes:
 // const fullResponse = await stream.text();
 // console.log(fullResponse);
-
-// Or text and tokens:
-// const { text, tokens } = await stream.textAndTokens();
-// console.log("Full text:", text, "All tokens:", tokens);
 ````
 
 ### Using Tools

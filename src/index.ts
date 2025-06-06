@@ -170,7 +170,7 @@ export class ModelSocket {
 
   protected onSeqClosed(event: Event) {
     if (!event.seq_id) {
-      throw new Error("recv error: seq_id is required");
+      Logger.error("recv error: seq_id is required");
     }
 
     const seq = this.seqs.get(event.seq_id!);
@@ -178,7 +178,7 @@ export class ModelSocket {
     if (seq) {
       seq.onClose(event);
     } else {
-      throw new Error(`state error: unknown seq_id ${event.seq_id}`);
+      Logger.error(`state error: unknown seq_id ${event.seq_id}`);
     }
   }
 
