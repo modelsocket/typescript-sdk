@@ -307,6 +307,12 @@ interface GenOptions {
   role?: string;
   tokens?: boolean;
   temperature?: number;
+  stopAt?: string[] | string;
+  limit?: number;
+  hidden?: boolean;
+  repeatPenalty?: number;
+  seed?: number;
+  topP?: number;
 }
 
 interface AppendOptions {
@@ -399,6 +405,7 @@ class Seq {
     let genStream = this.genStreams.get(cid);
 
     this.genStreams.delete(cid);
+
     if (genStream) {
       genStream.getWriter().close();
     } else {
@@ -564,7 +571,10 @@ class Seq {
     const { readable, writable } = new TransformStream<GenChunk, GenChunk>();
 
     this.genStreams.set(cid, writable);
-    this.curGenOpts = opts ?? null;
+
+    const reqOpts = genOptsToJson(opts || {});
+
+    this.curGenOpts = reqOpts ?? null;
 
     this.socket.send({
       request: ReqType.SEQ_COMMAND,
@@ -572,7 +582,7 @@ class Seq {
       cid,
       data: {
         command: SeqCommandType.SEQ_GEN,
-        ...opts,
+        ...reqOpts,
       },
     });
 
@@ -730,6 +740,31 @@ export interface GenChunk {
   text: string;
   hidden?: boolean;
   tokens?: number[];
+}
+
+// convert case, etc
+function genOptsToJson(opts: GenOptions): any {
+  let stop_at: string[] | undefined = undefined;
+
+  if (opts.stopAt) {
+    if (typeof opts.stopAt === "string") {
+      stop_at = [opts.stopAt];
+    } else if (Array.isArray(opts.stopAt)) {
+      stop_at = opts.stopAt;
+    }
+  }
+
+  return {
+    stop_strings: stop_at,
+    max_tokens: opts.limit,
+    repeat_penalty: opts.repeatPenalty,
+    seed: opts.seed,
+    top_p: opts.topP,
+    temperature: opts.temperature,
+    return_tokens: opts.tokens,
+    hidden: opts.hidden,
+    role: opts.role,
+  };
 }
 
 export class GenStream {
