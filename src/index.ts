@@ -313,6 +313,7 @@ interface GenOptions {
   repeatPenalty?: number;
   seed?: number;
   topP?: number;
+  thinking?: boolean;
 }
 
 interface AppendOptions {
@@ -399,6 +400,9 @@ class Seq {
 
   onGenFinished(event: Event) {
     const cid = event.cid;
+
+    //TODO if we can't find a promise, we should fail the whole
+    // socket because we're in an indeterminate state.
     const [resolve] = this.cmds.get(cid)!;
     this.cmds.delete(cid);
 
@@ -481,13 +485,26 @@ class Seq {
         }
       }
 
+      let genOpts = genOptsToJson(this.curGenOpts || {});
+
+      let prefill_text = null;
+      if (this.curGenOpts && this.curGenOpts.thinking !== undefined) {
+        // disable reasoning on tool call return
+        // nb: the space between the tags is important, it's not recognized
+        //  by models like deepseek otherwise.
+        prefill_text = "<think> </think>";
+      }
+
       this.socket.send({
         request: ReqType.SEQ_COMMAND,
         seq_id: this.seqId,
         cid: event.cid,
         data: {
           command: SeqCommandType.TOOL_RETURN,
-          gen_opts: this.curGenOpts,
+          gen_opts: {
+            ...genOpts,
+            prefill_text,
+          },
           results,
         },
       });
@@ -572,9 +589,11 @@ class Seq {
 
     this.genStreams.set(cid, writable);
 
+    this.curGenOpts = opts || {};
+
     const reqOpts = genOptsToJson(opts || {});
 
-    this.curGenOpts = reqOpts ?? null;
+    // this.curGenOpts = reqOpts ?? null;
 
     this.socket.send({
       request: ReqType.SEQ_COMMAND,
@@ -632,21 +651,21 @@ class Seq {
       throw new Error(`Tool with name ${tool.name} already exists`);
     }
 
-    // TODO allow customization of individual tool prompt
-    await this.append(
+    const toolPrompt =
       `Use the function '${tool.name}' to: ${tool.description}\n` +
-        JSON.stringify(
-          {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          },
-          null,
-          2
-        ) +
-        "\n\n",
-      { role: "system", hidden: true }
-    );
+      JSON.stringify(
+        {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        },
+        null,
+        2
+      ) +
+      "\n\n";
+
+    // TODO allow customization of individual tool prompt
+    await this.append(toolPrompt, { role: "system", hidden: true });
 
     this.tools[tool.name] = tool;
   }
@@ -754,6 +773,14 @@ function genOptsToJson(opts: GenOptions): any {
     }
   }
 
+  let prefill_text;
+
+  if (opts.thinking === true) {
+    prefill_text = "<think>\n";
+  } else if (opts.thinking === false) {
+    prefill_text = "<think></think>\n";
+  }
+
   return {
     stop_strings: stop_at,
     max_tokens: opts.limit,
@@ -764,6 +791,7 @@ function genOptsToJson(opts: GenOptions): any {
     return_tokens: opts.tokens,
     hidden: opts.hidden,
     role: opts.role,
+    prefill_text,
   };
 }
 
