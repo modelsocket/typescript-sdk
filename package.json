@@ -16,6 +16,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@libsql/isomorphic-ws": "^0.1.5",
     "@types/ws": "^8.18.1",
     "bufferutil": "^4.0.9",
     "ws": "^8.18.2"

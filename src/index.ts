@@ -1,4 +1,10 @@
-import { WebSocket, MessageEvent, ClientOptions } from "ws";
+import { WebSocket, MessageEvent, ClientOptions } from "@libsql/isomorphic-ws";
+
+interface ModelSocketClientOptions {
+  apiKey?: string;
+}
+
+const process = globalThis.process || { env: {} };
 
 const LOG_LEVEL: string | null = process.env.MODELSOCKET_LOG || null;
 
@@ -69,20 +75,30 @@ export class ModelSocket {
     this.socket.onmessage = this.onMessage.bind(this);
   }
 
-  static async connect(url: string, opts?: ClientOptions) {
-    const apiKey = process?.env?.MODELSOCKET_API_KEY;
-    let wsOpts = opts || {};
+  static async connect(url: string, opts?: ModelSocketClientOptions) {
+    const apiKey = opts?.apiKey || process?.env?.MODELSOCKET_API_KEY || null;
+    let arg: any = null;
 
-    if (apiKey) {
-      wsOpts = {
-        ...opts,
+    // 2nd constructor arg varies if using browser or ws library
+    if (globalThis.WebSocket) {
+      arg = ["modelsocket.v1"];
+
+      // if we're using native WebSocket, we have to pass auth key
+      // via the protocol header
+      if (apiKey) {
+        arg.push(`modelsocket-api-key.${apiKey}`);
+      }
+    } else {
+      // ws library allows headers
+      arg = {
+        protocol: "modelsocket.v1",
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
       };
     }
 
-    const socket = new WebSocket(url, wsOpts);
+    const socket = new WebSocket(url, arg);
 
     let p = new Promise<ModelSocket>((resolve, reject) => {
       socket.onopen = () => {
@@ -90,7 +106,7 @@ export class ModelSocket {
         resolve(new ModelSocket(socket));
       };
 
-      socket.onerror = (err) => {
+      socket.onerror = (err: any) => {
         Logger.error("conn error ", err);
         reject(err);
       };
