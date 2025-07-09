@@ -45,7 +45,7 @@ const Logger = (() => {
 })();
 
 interface OpenOptions {
-  tools?: boolean;
+  tools?: Tool[];
   toolPrompt?: string;
   skipPrelude?: boolean;
 }
@@ -292,16 +292,21 @@ export class ModelSocket {
       request: ReqType.SEQ_OPEN,
       data: {
         model,
-        //convert opts to snake case
-        tools_enabled: opts?.tools,
+        tools_enabled: opts?.tools?.length ? true : false,
         tool_prompt: opts?.toolPrompt,
         skip_prelude: opts?.skipPrelude,
       },
     });
 
     const seqId = await seqPromise;
-    const seq = new Seq(seqId, model, this, opts?.tools || false);
+    const seq = new Seq(seqId, model, this, []);
     this.seqs.set(seqId, seq);
+
+    // TODO send these tool defs to the server in open command
+    for (const tool of opts?.tools || []) {
+      // console.log("installing tool ", tool);
+      await seq.install(tool);
+    }
 
     return seq;
   }
@@ -357,14 +362,19 @@ class Seq {
     seqId: string,
     model: string,
     socket: ModelSocket,
-    toolsEnabled: boolean,
-    toolDefs?: ToolDefinitions
+    tools: Tool[]
   ) {
+    const toolDefs: ToolDefinitions = {};
+
+    for (const tool of tools) {
+      toolDefs[tool.name] = tool;
+    }
+
     this.seqId = seqId;
     this.model = model;
     this.socket = socket;
-    this.toolsEnabled = toolsEnabled;
-    this.tools = toolDefs || {};
+    this.toolsEnabled = tools.length > 0;
+    this.tools = toolDefs;
   }
 
   getModel(): string {
@@ -461,8 +471,7 @@ class Seq {
       event.child_seq_id!,
       this.model,
       this.socket,
-      this.toolsEnabled,
-      this.tools
+      Object.values(this.tools)
     );
 
     this.socket.registerSeq(childSeq);
@@ -654,12 +663,13 @@ class Seq {
     }
   }
 
+  // TODO make this inaccessible from outside the library
   async install(tool: Tool): Promise<void> {
-    if (!this.toolsEnabled) {
-      throw new Error(
-        "Tools are not enabled for this seq, call `open` with `{ tools: true }`"
-      );
-    }
+    // if (!this.toolsEnabled) {
+    //   throw new Error(
+    //     "Tools are not enabled for this seq, call `open` with `{ tools: true }`"
+    //   );
+    // }
 
     validateTool(tool);
 
