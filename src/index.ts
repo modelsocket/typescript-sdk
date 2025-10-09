@@ -175,12 +175,19 @@ export class ModelSocket {
     }
   }
 
+  // FIXME there is a race here due to an unknown state where seq commands may be issued
+  // out of order after an error occurs
   protected onError(event: Event) {
     Logger.error("error ", event);
 
     if (event.cid && this.openingSeqs.has(event.cid)) {
       const [, reject] = this.openingSeqs.get(event.cid)!;
       reject(new Error(`open error: ${event.message}`));
+    }
+
+    if (event.seq_id && this.seqs.has(event.seq_id)) {
+      const seq = this.seqs.get(event.seq_id)!;
+      seq.onError(event);
     }
   }
 
@@ -385,6 +392,14 @@ class Seq {
     return this.seqId;
   }
 
+  onError(event: Event) {
+    this.cmds.forEach(([, reject]) => {
+      reject(new Error(event.message));
+    });
+
+    this.cmds.clear();
+  }
+
   onClose(event?: Event) {
     if (event && event.cid) {
       const p = this.cmds.get(event.cid);
@@ -396,8 +411,10 @@ class Seq {
       }
     }
 
+    let error = event?.error || "seq closed";
+
     this.cmds.forEach(([, reject]) => {
-      reject(new Error("seq closed"));
+      reject(new Error(error));
     });
 
     this.cmds.clear();
@@ -706,9 +723,9 @@ function validateTool(tool: Tool) {
     throw new Error("Tool name must be a string");
   }
 
-  if (!tool.name.match(/^[a-zA-Z0-9_]+$/)) {
+  if (!tool.name.match(/^[a-zA-Z0-9_\.]+$/)) {
     throw new Error(
-      `Tool name ${tool.name} is not valid, only alphanumeric and underscores allowed.`
+      `Tool name ${tool.name} is not valid, only alphanumeric, periods and underscores allowed.`
     );
   }
 
@@ -774,6 +791,7 @@ interface Event {
   message?: string;
   child_seq_id?: string;
   tool_calls?: ToolCall[];
+  error?: string;
 }
 
 export interface ToolCall {
